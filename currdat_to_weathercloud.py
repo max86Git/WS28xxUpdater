@@ -16,18 +16,28 @@ update_interval = 11 * 60
 
 #---------------------------------------
 # function to read data from currdat.lst
-def read_data(filename):
+def read_data(filename, retries=3, delay=5):
     data = {}
-    with open(filename, "r") as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("[") and line.endswith("]"):
-                section = line[1:-1]
-                data[section] = {}
-            elif "=" in line and line.count('=') == 1:
-                key, value = line.split("=")
-                data[section][key] = value.strip('"')
-    return data
+    attempts = 0
+
+    while attempts < retries:
+        try:
+            with open(filename, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("[") and line.endswith("]"):
+                        section = line[1:-1]
+                        data[section] = {}
+                    elif "=" in line and line.count('=') == 1:
+                        key, value = line.split("=")
+                        data[section][key] = value.strip('"')
+            return data
+        except PermissionError:
+            attempts += 1
+            if attempts < retries:
+                time.sleep(delay)
+            else:
+                raise PermissionError(f"Impossible d'ouvrir le fichier {filename} après {retries} tentatives")
 
 
 # function to send data to Weathercloud
